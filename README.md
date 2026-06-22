@@ -1,2 +1,3 @@
-# inkvrse-os
-iNKVRSE.OS PWA under MONOLITH — Tattoo Industry Operating System
+# iNKVRSE.OS
+
+The Universe of Ink — AI-powered operating system for the tattoo industry under MONOLITH™.
