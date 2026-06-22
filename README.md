@@ -1,3 +1,5 @@
 # iNKVRSE.OS
 
-The Universe of Ink — AI-powered operating system for the tattoo industry under MONOLITH™.
+MONOLITH — The Universe of Ink
+
+Full PWA with Stripe, PWA, Push Notifications, iNKFi Wallet, iNK-iD Verification.
