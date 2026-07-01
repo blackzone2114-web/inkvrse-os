@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>iNKVERSE | The Operating System for Tattooing</title>
+    <meta
+      name="description"
+      content="A launch-ready founder landing page for iNKVERSE, powered by MONOLITH."
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main>
+      <section class="hero">
+        <nav>
+          <div class="brand">iNKVERSE</div>
+          <div class="nav-links">
+            <a href="#ecosystem">Ecosystem</a>
+            <a href="#founders">Founders</a>
+            <a href="#faq">FAQ</a>
+          </div>
+          <button data-scroll="#founders" class="ghost">Join Day 1</button>
+        </nav>
+
+        <div class="hero-grid">
+          <div class="hero-copy reveal">
+            <span class="eyebrow">Powered by MONOLITH</span>
+            <h1>The operating system for the tattoo industry.</h1>
+            <p>
+              One login for artists, studios, suppliers and collectors. Bookings, bids, discovery,
+              payments, supply, content and community finally connected under one roof.
+            </p>
+            <div class="hero-actions">
+              <button data-scroll="#founders" class="primary">Become a Founder <span>→</span></button>
+              <button data-scroll="#preview" class="secondary">View platform preview</button>
+            </div>
+            <div class="proof">
+              <span>✓ Foundation memberships</span>
+              <span>✓ Stripe ready</span>
+              <span>✓ Supabase ready</span>
+            </div>
+          </div>
+
+          <div id="preview" class="dashboard reveal">
+            <div class="dash-top">
+              <span>MONOLITH COMMAND</span>
+              <span class="live-dot">LIVE</span>
+            </div>
+            <div class="dash-panel gold-panel">
+              <strong>50+ connected industry tools</strong>
+              <p>iNKBID, iNKWRAP, iNKDROP, iNKFI, iNKHUB, iNKMATCH and more.</p>
+            </div>
+            <div class="dash-row">
+              <div><span class="icon">◆</span>421<br /><small>Founders</small></div>
+              <div><span class="icon">▣</span>18<br /><small>Studios</small></div>
+              <div><span class="icon">◎</span>7<br /><small>Countries</small></div>
+            </div>
+            <div class="signal-bars">
+              <span></span><span></span><span></span><span></span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="problem">
+        <span class="eyebrow">The Problem</span>
+        <h2>Instagram was not built for tattooing.</h2>
+        <div class="problem-grid">
+          <p>Calendars were not built for artists.</p>
+          <p>Directories were not built for discovery.</p>
+          <p>Payments were not built for deposits.</p>
+          <p>Suppliers were not built into studio workflow.</p>
+        </div>
+        <h3>Everything is disconnected. Until now.</h3>
+      </section>
+
+      <section id="ecosystem" class="section">
+        <span class="eyebrow">The Ecosystem</span>
+        <h2>Not another app. Industry infrastructure.</h2>
+        <div class="feature-grid">
+          <article><b>✦</b><h3>iNKBID</h3><p>Client demand, artist bids, deposit-backed bookings.</p></article>
+          <article><b>✦</b><h3>iNKMATCH</h3><p>Style, region and availability matching for serious collectors.</p></article>
+          <article><b>✦</b><h3>iNKHUB</h3><p>Artist rooms, studio walls, guest spots and private industry feeds.</p></article>
+          <article><b>✦</b><h3>iNKSHOP</h3><p>Prints, flash, merch and digital products built into the ecosystem.</p></article>
+          <article><b>✦</b><h3>iNKSUPPLY</h3><p>Supplier pages, ordering and industry-only marketplace rails.</p></article>
+          <article><b>✦</b><h3>iNKFI</h3><p>Deposits, finance, founder memberships and future studio capital.</p></article>
+        </div>
+      </section>
+
+      <section id="founders" class="section founders">
+        <div>
+          <span class="eyebrow">Day 1 Foundation</span>
+          <h2>Founding members get in before the industry catches up.</h2>
+          <p>Pick a tier, claim founder status, and help shape the platform before public release.</p>
+        </div>
+
+        <form id="waitlist-form" class="waitlist">
+          <input id="email" type="email" required placeholder="Email address" />
+          <select id="role">
+            <option value="artist">Artist</option>
+            <option value="studio">Studio</option>
+            <option value="supplier">Supplier</option>
+            <option value="collector">Collector</option>
+          </select>
+          <button class="primary">Join Waitlist</button>
+        </form>
+        <p id="status" class="status" aria-live="polite"></p>
+
+        <div class="tier-grid">
+          <article>
+            <b>⚡</b><h3>Foundation Artist</h3><strong>$19<span>/mo</span></strong>
+            <p>Founder badge, profile priority, beta access.</p>
+            <button data-tier="Foundation Artist" class="secondary checkout">Start checkout</button>
+          </article>
+          <article>
+            <b>⚡</b><h3>Foundation Studio</h3><strong>$49<span>/mo</span></strong>
+            <p>Studio wall, team profiles, launch directory placement.</p>
+            <button data-tier="Foundation Studio" class="secondary checkout">Start checkout</button>
+          </article>
+          <article>
+            <b>⚡</b><h3>Foundation Supplier</h3><strong>$79<span>/mo</span></strong>
+            <p>Supplier page, early marketplace access, launch features.</p>
+            <button data-tier="Foundation Supplier" class="secondary checkout">Start checkout</button>
+          </article>
+        </div>
+      </section>
+
+      <section class="section roadmap">
+        <span class="eyebrow">Launch Path</span>
+        <h2>Built to move from landing page to live product.</h2>
+        <div class="timeline">
+          <div>▸ Founder intake</div>
+          <div>▸ Artist vetting</div>
+          <div>▸ Private beta</div>
+          <div>▸ Marketplace rails</div>
+          <div>▸ Public launch</div>
+        </div>
+      </section>
+
+      <section id="faq" class="section faq">
+        <span class="eyebrow">FAQ</span>
+        <h2>Sharp answers. No fluff tax.</h2>
+        <button class="faq-item open"><span>Is iNKVERSE live yet?</span><i>⌄</i><p>This is the launch gate: founder signup, waitlist collection and payment wiring. The full platform unlocks in staged releases.</p></button>
+        <button class="faq-item"><span>Can Stripe and Supabase work today?</span><i>⌄</i><p>Yes. Add the Vercel environment variables and the buttons route through Stripe while signups write to Supabase.</p></button>
+        <button class="faq-item"><span>Who is it for?</span><i>⌄</i><p>Tattoo artists, studios, suppliers and collectors who want one connected industry system instead of scattered tools.</p></button>
+      </section>
+    </main>
+    <script src="/script.js"></script>
+  </body>
+</html>
