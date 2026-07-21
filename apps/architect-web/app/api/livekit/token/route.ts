@@ -1,4 +1,6 @@
+import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
+import { RoomAgentDispatch, RoomConfiguration } from "@livekit/protocol";
 import { AccessToken } from "livekit-server-sdk";
 import { createClient } from "@/lib/supabase/server";
 
@@ -26,7 +28,10 @@ export async function POST() {
     return NextResponse.json({ error: "LiveKit is not configured." }, { status: 503 });
   }
 
-  const roomName = `architect-${workspace.id}`;
+  const agentName = process.env.LINK_AGENT_NAME || "architect-link";
+  // A unique room per activation guarantees token-based explicit dispatch is applied
+  // at room creation instead of being ignored because an old room already exists.
+  const roomName = `architect-${workspace.id}-${randomUUID()}`;
   const token = new AccessToken(apiKey, apiSecret, {
     identity: user.id,
     name: user.email ?? "Architect OS User",
@@ -41,10 +46,23 @@ export async function POST() {
     canPublishData: true,
   });
 
+  token.roomConfig = new RoomConfiguration({
+    agents: [
+      new RoomAgentDispatch({
+        agentName,
+        metadata: JSON.stringify({
+          workspaceId: workspace.id,
+          userId: user.id,
+        }),
+      }),
+    ],
+  });
+
   return NextResponse.json({
     url,
     roomName,
     participantIdentity: user.id,
+    agentName,
     token: await token.toJwt(),
   });
 }
