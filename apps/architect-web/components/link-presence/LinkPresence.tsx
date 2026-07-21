@@ -25,6 +25,7 @@ export function LinkPresence() {
     if (state !== "speaking") return;
     let frame = 0;
     const tick = () => {
+      // Phase-one stand-in. LiveKit output audio will replace this envelope.
       const syntheticVoiceEnvelope = 0.28 + Math.abs(Math.sin(performance.now() / 92)) * 0.72;
       setLevel(syntheticVoiceEnvelope);
       frame = requestAnimationFrame(tick);
@@ -64,9 +65,7 @@ export function LinkPresence() {
       window.setTimeout(speakGreeting, 260);
     };
     recognition.onerror = () => setState("error");
-    recognition.onend = () => {
-      if (state === "listening") setState("dormant");
-    };
+    recognition.onend = () => setState((current) => current === "listening" ? "dormant" : current);
     recognitionRef.current = recognition;
     recognition.start();
   };
@@ -91,11 +90,4 @@ export function LinkPresence() {
       <span className="link-status">{state === "dormant" ? "LiNK ready" : state}</span>
     </button>
   );
-}
-
-declare global {
-  interface Window {
-    SpeechRecognition?: typeof SpeechRecognition;
-    webkitSpeechRecognition?: typeof SpeechRecognition;
-  }
 }
