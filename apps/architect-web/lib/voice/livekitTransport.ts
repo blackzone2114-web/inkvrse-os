@@ -12,6 +12,7 @@ type TokenResponse = {
   token: string;
   roomName: string;
   participantIdentity: string;
+  agentName?: string;
 };
 
 async function getConnectionToken(): Promise<TokenResponse> {
@@ -28,10 +29,24 @@ async function getConnectionToken(): Promise<TokenResponse> {
   return payload as TokenResponse;
 }
 
+function isAllowedArchitectPath(path: string) {
+  return path === "/" || path === "/wargame";
+}
+
 export async function connectLinkRealtime(): Promise<LinkRealtimeConnection> {
   const credentials = await getConnectionToken();
   const room = new Room({ adaptiveStream: true, dynacast: true });
   const attachedAudio = new Set<HTMLMediaElement>();
+
+  room.localParticipant.registerRpcMethod("architect.navigate", async (data) => {
+    const path = String(data.payload ?? "");
+    if (!isAllowedArchitectPath(path)) {
+      throw new Error("Navigation target is not permitted.");
+    }
+
+    window.location.assign(path);
+    return JSON.stringify({ ok: true, path });
+  });
 
   const handleTrackSubscribed = (track: RemoteTrack) => {
     if (track.kind !== Track.Kind.Audio) return;
@@ -75,6 +90,7 @@ export async function connectLinkRealtime(): Promise<LinkRealtimeConnection> {
     async disconnect() {
       room.off(RoomEvent.TrackSubscribed, handleTrackSubscribed);
       room.off(RoomEvent.TrackUnsubscribed, handleTrackUnsubscribed);
+      room.localParticipant.unregisterRpcMethod("architect.navigate");
       await room.localParticipant.setMicrophoneEnabled(false).catch(() => undefined);
       room.disconnect();
       for (const element of attachedAudio) element.remove();
