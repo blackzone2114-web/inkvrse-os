@@ -2,7 +2,9 @@ import {
   WorkerOptions,
   cli,
   defineAgent,
+  getJobContext,
   inference,
+  llm,
   voice,
 } from "@livekit/agents";
 import * as silero from "@livekit/agents-plugin-silero";
@@ -23,6 +25,31 @@ function getGreeting(date = new Date()) {
   return "Good evening, sir.";
 }
 
+async function navigateFrontend(path) {
+  const room = getJobContext().room;
+  const participant = Array.from(room.remoteParticipants.values())[0];
+  if (!participant) throw new llm.ToolError("No Architect OS client is connected.");
+
+  return room.localParticipant.performRpc({
+    destinationIdentity: participant.identity,
+    method: "architect.navigate",
+    payload: path,
+    responseTimeout: 5000,
+  });
+}
+
+const openWargame = llm.tool({
+  name: "open_wargame",
+  description: "Open the authenticated Architect OS Wargame workspace when the user explicitly asks to open, show, or go to Wargame.",
+  execute: async () => navigateFrontend("/wargame"),
+});
+
+const openCommand = llm.tool({
+  name: "open_command",
+  description: "Return the authenticated Architect OS interface to the main Command workspace when the user explicitly asks to open or return to Command.",
+  execute: async () => navigateFrontend("/"),
+});
+
 const instructions = `
 You are LiNK, the persistent coordinating intelligence inside Architect OS.
 
@@ -41,6 +68,7 @@ Operational behaviour:
 - Use the World Model and Wargame Engine for high-impact or coupled decisions.
 - Never silently rewrite canon or promote a workflow without the required evidence and approval.
 - Treat the realtime room as an authenticated Architect OS session, but do not assume access to any external tool until that tool is explicitly connected and returns a result.
+- UI navigation tools are safe presentation actions only. Never describe them as completing the underlying operational task.
 `;
 
 export default defineAgent({
@@ -49,7 +77,10 @@ export default defineAgent({
   },
 
   entry: async (ctx) => {
-    const agent = new voice.Agent({ instructions });
+    const agent = new voice.Agent({
+      instructions,
+      tools: [openWargame, openCommand],
+    });
 
     const session = new voice.AgentSession({
       stt: new inference.STT({
