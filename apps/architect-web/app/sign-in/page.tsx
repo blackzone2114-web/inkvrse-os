@@ -1,11 +1,11 @@
-import { signIn } from "./actions";
+import { signIn, signUp } from "./actions";
 
 interface SignInPageProps {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; message?: string }>;
 }
 
 export default async function SignInPage({ searchParams }: SignInPageProps) {
-  const { error } = await searchParams;
+  const { error, message } = await searchParams;
 
   return (
     <main className="auth-shell">
@@ -14,17 +14,19 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
         <h1>LiNK is standing by.</h1>
         <p>Authenticate to restore your workspace, Presence Memory, approvals and operational timeline.</p>
 
-        <form action={signIn} className="auth-form">
+        <form className="auth-form">
           <label>
             EMAIL
             <input name="email" type="email" autoComplete="email" required />
           </label>
           <label>
             PASSWORD
-            <input name="password" type="password" autoComplete="current-password" required />
+            <input name="password" type="password" autoComplete="current-password" minLength={8} required />
           </label>
           {error ? <p className="auth-error" role="alert">{error}</p> : null}
-          <button type="submit">ENTER ARCHITECT OS</button>
+          {message ? <p role="status">{message}</p> : null}
+          <button formAction={signIn} type="submit">ENTER ARCHITECT OS</button>
+          <button formAction={signUp} type="submit">CREATE OWNER ACCOUNT</button>
         </form>
 
         <small>No service-role secrets are exposed to this page. Workspace access is enforced by database row-level security.</small>
