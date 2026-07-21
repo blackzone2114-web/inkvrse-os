@@ -45,8 +45,18 @@ export async function bootstrapWorkspace() {
   }
 
   for (const [subject, predicate, objectText] of canon) {
-    await supabase.from("memories").upsert(
-      {
+    const { data: existingCanon } = await supabase
+      .from("memories")
+      .select("id")
+      .eq("workspace_id", workspaceId)
+      .eq("subject", subject)
+      .eq("predicate", predicate)
+      .eq("authority", "canon")
+      .eq("status", "active")
+      .maybeSingle();
+
+    if (!existingCanon) {
+      await supabase.from("memories").insert({
         workspace_id: workspaceId,
         subject,
         predicate,
@@ -57,19 +67,28 @@ export async function bootstrapWorkspace() {
         source_type: "architect_bootstrap",
         source_ref: "PRESENCE-MEMORY-CANON.md",
         created_by: user.id,
-      },
-      { onConflict: "workspace_id,subject,predicate", ignoreDuplicates: true },
-    );
+      });
+    }
   }
 
-  await supabase.from("operational_events").insert({
-    workspace_id: workspaceId,
-    event_type: "system.bootstrap",
-    title: "Presence Memory initialised",
-    summary: "Architect OS workspace and core LiNK canon are active.",
-    severity: "info",
-    source_tool: "Architect OS",
-  });
+  const { data: existingBootstrapEvent } = await supabase
+    .from("operational_events")
+    .select("id")
+    .eq("workspace_id", workspaceId)
+    .eq("event_type", "system.bootstrap")
+    .limit(1)
+    .maybeSingle();
+
+  if (!existingBootstrapEvent) {
+    await supabase.from("operational_events").insert({
+      workspace_id: workspaceId,
+      event_type: "system.bootstrap",
+      title: "Presence Memory initialised",
+      summary: "Architect OS workspace and core LiNK canon are active.",
+      severity: "info",
+      source_tool: "Architect OS",
+    });
+  }
 
   revalidatePath("/");
   return { ok: true, workspaceId };
