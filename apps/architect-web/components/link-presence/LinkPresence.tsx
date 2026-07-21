@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createAudioLevelAnalyser } from "@/lib/voice/audioAnalyser";
 import { routeLinkCommand } from "@/lib/voice/commandRouter";
 import { extractLinkCommand, getLinkGreeting, selectLinkVoice } from "@/lib/voice/linkVoice";
+import { connectLinkRealtime, type LinkRealtimeConnection } from "@/lib/voice/livekitTransport";
 import { subscribeToLinkOutputStream } from "@/lib/voice/outputBus";
 
 type PresenceState = "dormant" | "listening" | "processing" | "speaking" | "error";
@@ -14,19 +15,44 @@ export function LinkPresence() {
   const [state, setState] = useState<PresenceState>("dormant");
   const [level, setLevel] = useState(0);
   const [heard, setHeard] = useState("");
+  const [realtimeReady, setRealtimeReady] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const speakingRef = useRef(false);
   const realAudioActiveRef = useRef(false);
+  const realtimeRef = useRef<LinkRealtimeConnection | null>(null);
+  const realtimeConnectPromiseRef = useRef<Promise<LinkRealtimeConnection | null> | null>(null);
   const stopAnalyserRef = useRef<null | (() => Promise<void>)>(null);
 
   const litSegments = useMemo(() => Math.round(level * LED_COUNT), [level]);
+
+  const ensureRealtime = async () => {
+    if (realtimeRef.current) return realtimeRef.current;
+    if (realtimeConnectPromiseRef.current) return realtimeConnectPromiseRef.current;
+
+    realtimeConnectPromiseRef.current = connectLinkRealtime()
+      .then(async (connection) => {
+        realtimeRef.current = connection;
+        setRealtimeReady(true);
+        await connection.setMicrophoneEnabled(true);
+        return connection;
+      })
+      .catch(() => {
+        setRealtimeReady(false);
+        return null;
+      })
+      .finally(() => {
+        realtimeConnectPromiseRef.current = null;
+      });
+
+    return realtimeConnectPromiseRef.current;
+  };
 
   const stopSpeaking = () => {
     if (!speakingRef.current) return;
     window.speechSynthesis.cancel();
     speakingRef.current = false;
-    setLevel(0);
+    if (!realAudioActiveRef.current) setLevel(0);
     setState("listening");
   };
 
@@ -78,8 +104,8 @@ export function LinkPresence() {
     if (state !== "speaking" || realAudioActiveRef.current) return;
     let frame = 0;
     const tick = () => {
-      // Honest fallback only. Real TTS/LiveKit streams publish through outputBus and
-      // bypass this synthetic envelope entirely.
+      // Honest browser fallback only. A subscribed LiveKit/TTS MediaStream bypasses
+      // this envelope and drives the LEDs from its measured PCM amplitude.
       const envelope = 0.22 + Math.abs(Math.sin(performance.now() / 86)) * 0.78;
       setLevel(envelope);
       frame = requestAnimationFrame(tick);
@@ -145,18 +171,23 @@ export function LinkPresence() {
     recognitionRef.current?.abort();
     window.speechSynthesis.cancel();
     void stopAnalyserRef.current?.();
+    void realtimeRef.current?.disconnect();
   }, []);
 
-  const activate = () => {
+  const activate = async () => {
     if (state === "speaking") {
       stopSpeaking();
       return;
     }
+
+    // LiveKit connection is attempted only after an explicit user gesture, which
+    // keeps microphone/autoplay permissions aligned with browser security rules.
+    await ensureRealtime();
     startListening();
   };
 
   return (
-    <button className="link-presence" data-state={state} onClick={activate} aria-label={`LiNK status: ${state}`} title={heard ? `Last heard: ${heard}` : "Say LiNK to wake"}>
+    <button className="link-presence" data-state={state} onClick={() => void activate()} aria-label={`LiNK status: ${state}`} title={heard ? `Last heard: ${heard}` : "Say LiNK to wake"}>
       <div className="link-image-shell">
         <img src="/brand/link-canon.png" alt="LiNK canonical black and gold emblem" />
         <div className="led-overlay" aria-hidden="true">
@@ -172,7 +203,7 @@ export function LinkPresence() {
           ))}
         </div>
       </div>
-      <span className="link-status">{state === "dormant" ? "LiNK ready · say LiNK" : state}</span>
+      <span className="link-status">{state === "dormant" ? `LiNK ready · ${realtimeReady ? "realtime" : "fallback"}` : state}</span>
     </button>
   );
 }
