@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { LinkPresence } from "@/components/link-presence/LinkPresence";
 import { getCommandSnapshot } from "@/lib/command/getCommandSnapshot";
+import { bootstrapWorkspace } from "./actions/bootstrapWorkspace";
 
 const modules = [
   { label: "COMMAND" },
@@ -26,6 +27,7 @@ export default async function Home() {
   const topApproval = snapshot.approvals[0];
   const topBlocked = snapshot.blockedProjects[0];
   const recentEvent = snapshot.recentEvents[0];
+  const needsBootstrap = snapshot.mode === "live" && snapshot.workspaceName === "No workspace yet";
 
   return (
     <main className="os-shell">
@@ -52,7 +54,13 @@ export default async function Home() {
             <p className="kicker">COORDINATING INTELLIGENCE</p>
             <h1>{greeting()}</h1>
             <p>LiNK is online with persistent project context, canon precedence, operational events and permission-gated tool receipts.</p>
-            <div className="command-input"><span>ASK LiNK</span><input aria-label="Ask LiNK" placeholder="What requires my attention?" /><button>TRANSMIT</button></div>
+            {needsBootstrap ? (
+              <form action={bootstrapWorkspace}>
+                <button type="submit">INITIALISE ARCHITECT OS</button>
+              </form>
+            ) : (
+              <div className="command-input"><span>ASK LiNK</span><input aria-label="Ask LiNK" placeholder="What requires my attention?" /><button>TRANSMIT</button></div>
+            )}
           </div>
           <LinkPresence />
         </div>
