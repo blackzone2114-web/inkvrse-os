@@ -29,6 +29,11 @@ export default async function Home() {
   const recentEvent = snapshot.recentEvents[0];
   const needsBootstrap = snapshot.mode === "live" && snapshot.workspaceName === "No workspace yet";
 
+  async function initialiseArchitectOS() {
+    "use server";
+    await bootstrapWorkspace();
+  }
+
   return (
     <main className="os-shell">
       <aside className="rail">
@@ -55,7 +60,7 @@ export default async function Home() {
             <h1>{greeting()}</h1>
             <p>LiNK is online with persistent project context, canon precedence, operational events and permission-gated tool receipts.</p>
             {needsBootstrap ? (
-              <form action={bootstrapWorkspace}>
+              <form action={initialiseArchitectOS}>
                 <button type="submit">INITIALISE ARCHITECT OS</button>
               </form>
             ) : (
