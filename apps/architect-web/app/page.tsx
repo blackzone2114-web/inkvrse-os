@@ -2,7 +2,17 @@ import Link from "next/link";
 import { LinkPresence } from "@/components/link-presence/LinkPresence";
 import { getCommandSnapshot } from "@/lib/command/getCommandSnapshot";
 
-const modules = ["COMMAND", "PROJECTS", "MEMORY", "CONSTRUCT", "WARGAME", "ARMORY", "VAULT", "TIMELINE"];
+const modules = [
+  { label: "COMMAND" },
+  { label: "APPROVALS", href: "/approvals" },
+  { label: "PROJECTS" },
+  { label: "MEMORY" },
+  { label: "CONSTRUCT" },
+  { label: "WARGAME", href: "/wargame" },
+  { label: "ARMORY" },
+  { label: "VAULT" },
+  { label: "TIMELINE" },
+];
 
 function greeting(date = new Date()) {
   const hour = date.getHours();
@@ -22,13 +32,13 @@ export default async function Home() {
       <aside className="rail">
         <div className="rail-brand">ARCHITECT<span>OS</span></div>
         <nav>
-          {modules.map((module, index) => module === "WARGAME" ? (
-            <Link className="rail-link" href="/wargame" key={module}>{module}</Link>
+          {modules.map((module, index) => module.href ? (
+            <Link className="rail-link" href={module.href} key={module.label}>{module.label}</Link>
           ) : (
-            <button className={index === 0 ? "active" : ""} key={module}>{module}</button>
+            <button className={index === 0 ? "active" : ""} key={module.label}>{module.label}</button>
           ))}
         </nav>
-        <div className="rail-foot">LiNK CORE v0.3</div>
+        <div className="rail-foot">LiNK CORE v0.4</div>
       </aside>
 
       <section className="command-stage">
