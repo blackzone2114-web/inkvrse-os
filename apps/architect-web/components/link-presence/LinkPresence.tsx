@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createAudioLevelAnalyser } from "@/lib/voice/audioAnalyser";
+import { routeLinkCommand } from "@/lib/voice/commandRouter";
 import { extractLinkCommand, getLinkGreeting, selectLinkVoice } from "@/lib/voice/linkVoice";
+import { subscribeToLinkOutputStream } from "@/lib/voice/outputBus";
 
 type PresenceState = "dormant" | "listening" | "processing" | "speaking" | "error";
 
@@ -14,6 +17,8 @@ export function LinkPresence() {
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const speakingRef = useRef(false);
+  const realAudioActiveRef = useRef(false);
+  const stopAnalyserRef = useRef<null | (() => Promise<void>)>(null);
 
   const litSegments = useMemo(() => Math.round(level * LED_COUNT), [level]);
 
@@ -38,7 +43,7 @@ export function LinkPresence() {
     };
     utterance.onend = () => {
       speakingRef.current = false;
-      setLevel(0);
+      if (!realAudioActiveRef.current) setLevel(0);
       setState("listening");
     };
     utterance.onerror = () => {
@@ -50,11 +55,31 @@ export function LinkPresence() {
   };
 
   useEffect(() => {
-    if (state !== "speaking") return;
+    return subscribeToLinkOutputStream((stream) => {
+      void stopAnalyserRef.current?.();
+      realAudioActiveRef.current = true;
+      setState("speaking");
+      stopAnalyserRef.current = createAudioLevelAnalyser(stream, ({ smoothed }) => setLevel(smoothed));
+
+      const track = stream.getAudioTracks()[0];
+      if (track) {
+        track.addEventListener("ended", () => {
+          void stopAnalyserRef.current?.();
+          stopAnalyserRef.current = null;
+          realAudioActiveRef.current = false;
+          setLevel(0);
+          setState("listening");
+        }, { once: true });
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    if (state !== "speaking" || realAudioActiveRef.current) return;
     let frame = 0;
     const tick = () => {
-      // Browser speechSynthesis does not expose its output PCM. This envelope remains
-      // a truthful fallback until LiveKit/TTS supplies an analysable MediaStream.
+      // Honest fallback only. Real TTS/LiveKit streams publish through outputBus and
+      // bypass this synthetic envelope entirely.
       const envelope = 0.22 + Math.abs(Math.sin(performance.now() / 86)) * 0.78;
       setLevel(envelope);
       frame = requestAnimationFrame(tick);
@@ -89,13 +114,20 @@ export function LinkPresence() {
       if (!result.isFinal) return;
 
       setState("processing");
-      if (!command) {
+      const route = routeLinkCommand(command);
+
+      if (route.kind === "greeting") {
         window.setTimeout(() => speak(getLinkGreeting()), 140);
         return;
       }
 
-      // Command routing lands next. For now LiNK confirms wake capture without
-      // fabricating execution of an unconnected tool or agent action.
+      if (route.kind === "wargame") {
+        window.setTimeout(() => speak(`${getLinkGreeting()} Wargame command received. Open Wargame to review before execution.`), 140);
+        return;
+      }
+
+      // Tool and agent execution will attach here. Until then LiNK confirms capture
+      // without claiming an action occurred.
       window.setTimeout(() => speak(`${getLinkGreeting()} I heard your command.`), 140);
     };
 
@@ -112,6 +144,7 @@ export function LinkPresence() {
   useEffect(() => () => {
     recognitionRef.current?.abort();
     window.speechSynthesis.cancel();
+    void stopAnalyserRef.current?.();
   }, []);
 
   const activate = () => {
