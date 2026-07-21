@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
 import { runWargame } from "@/src/lib/wargame/engine";
+import { decideWargame, saveWargameRun } from "./actions";
 
 const demo = runWargame({
   objective: "Ship a consequential Architect OS change safely",
@@ -15,7 +17,38 @@ const demo = runWargame({
   confidence: 0.82,
 });
 
-export default function WargamePage() {
+async function getLatestRun() {
+  const supabase = await createClient();
+  if (!supabase) return { mode: "preview" as const, run: null };
+
+  const { data: authData } = await supabase.auth.getUser();
+  if (!authData.user) return { mode: "preview" as const, run: null };
+
+  const { data: workspaces } = await supabase
+    .from("workspaces")
+    .select("id")
+    .order("created_at", { ascending: true })
+    .limit(1);
+
+  const workspace = workspaces?.[0];
+  if (!workspace) return { mode: "live" as const, run: null };
+
+  const { data } = await supabase
+    .from("wargame_runs")
+    .select("id,chosen_action,created_at,recommendation_action,recommendation_confidence")
+    .eq("workspace_id", workspace.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  return { mode: "live" as const, run: data ?? null };
+}
+
+export default async function WargamePage() {
+  const latest = await getLatestRun();
+  const persisted = latest.run;
+  const canDecide = latest.mode === "live" && persisted && !persisted.chosen_action;
+
   return (
     <main className="wargame-shell">
       <header className="wargame-header">
@@ -27,7 +60,7 @@ export default function WargamePage() {
         <div><small>OBJECTIVE</small><strong>{demo.input.objective}</strong></div>
         <div><small>RECOMMENDATION</small><strong>{demo.recommendation.action.replaceAll("_", " ").toUpperCase()}</strong></div>
         <div><small>CONFIDENCE</small><strong>{Math.round(demo.recommendation.confidence * 100)}%</strong></div>
-        <div><small>HUMAN REVIEW</small><strong>{demo.reviewRequired ? "REQUIRED" : "NOT REQUIRED"}</strong></div>
+        <div><small>STATUS</small><strong>{latest.mode === "live" ? (persisted?.chosen_action ? `DECIDED · ${persisted.chosen_action.toUpperCase()}` : persisted ? "AWAITING DECISION" : "UNSAVED") : "SAFE PREVIEW"}</strong></div>
       </section>
 
       <section className="scenario-grid" aria-label="Wargame scenarios">
@@ -46,8 +79,23 @@ export default function WargamePage() {
       </section>
 
       <section className="decision-panel">
-        <div><p className="kicker">DECISION GATE</p><h2>{demo.recommendation.rationale[0]}</h2><p>LiNK will not execute from this screen until persistence, identity, and approval actions are connected to the live Supabase workspace.</p></div>
-        <div className="decision-actions"><button disabled>APPROVE</button><button disabled>REJECT</button><button disabled>RUN AGAIN</button></div>
+        <div>
+          <p className="kicker">DECISION GATE</p>
+          <h2>{demo.recommendation.rationale[0]}</h2>
+          <p>{latest.mode === "preview" ? "Connect Supabase and authenticate to persist this wargame and unlock the decision gate." : persisted ? "This run is persisted. Decisions are written with the authenticated user identity and remain auditable." : "Save the current simulation before making a decision."}</p>
+        </div>
+        <div className="decision-actions">
+          {!persisted && latest.mode === "live" ? (
+            <form action={saveWargameRun}><button type="submit">SAVE RUN</button></form>
+          ) : null}
+          {canDecide ? (
+            <>
+              <form action={decideWargame}><input type="hidden" name="runId" value={persisted.id} /><input type="hidden" name="chosenAction" value="approve" /><button type="submit">APPROVE</button></form>
+              <form action={decideWargame}><input type="hidden" name="runId" value={persisted.id} /><input type="hidden" name="chosenAction" value="reject" /><button type="submit">REJECT</button></form>
+            </>
+          ) : null}
+          <button disabled>RUN AGAIN</button>
+        </div>
       </section>
     </main>
   );
