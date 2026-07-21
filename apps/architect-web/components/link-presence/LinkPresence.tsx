@@ -34,7 +34,10 @@ export function LinkPresence() {
       .then(async (connection) => {
         realtimeRef.current = connection;
         setRealtimeReady(true);
+        recognitionRef.current?.abort();
+        recognitionRef.current = null;
         await connection.setMicrophoneEnabled(true);
+        setState("listening");
         return connection;
       })
       .catch(() => {
@@ -48,7 +51,7 @@ export function LinkPresence() {
     return realtimeConnectPromiseRef.current;
   };
 
-  const stopSpeaking = () => {
+  const stopBrowserSpeaking = () => {
     if (!speakingRef.current) return;
     window.speechSynthesis.cancel();
     speakingRef.current = false;
@@ -56,7 +59,7 @@ export function LinkPresence() {
     setState("listening");
   };
 
-  const speak = (text: string) => {
+  const speakFallback = (text: string) => {
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 0.93;
@@ -114,10 +117,10 @@ export function LinkPresence() {
     return () => cancelAnimationFrame(frame);
   }, [state]);
 
-  const startListening = () => {
+  const startBrowserFallback = () => {
     const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!Recognition) {
-      speak(getLinkGreeting());
+      speakFallback(getLinkGreeting());
       return;
     }
 
@@ -136,25 +139,23 @@ export function LinkPresence() {
       const command = extractLinkCommand(transcript);
       if (command === null) return;
 
-      if (speakingRef.current) stopSpeaking();
+      if (speakingRef.current) stopBrowserSpeaking();
       if (!result.isFinal) return;
 
       setState("processing");
       const route = routeLinkCommand(command);
 
       if (route.kind === "greeting") {
-        window.setTimeout(() => speak(getLinkGreeting()), 140);
+        window.setTimeout(() => speakFallback(getLinkGreeting()), 140);
         return;
       }
 
       if (route.kind === "wargame") {
-        window.setTimeout(() => speak(`${getLinkGreeting()} Wargame command received. Open Wargame to review before execution.`), 140);
+        window.setTimeout(() => speakFallback(`${getLinkGreeting()} Wargame command received. Open Wargame to review before execution.`), 140);
         return;
       }
 
-      // Tool and agent execution will attach here. Until then LiNK confirms capture
-      // without claiming an action occurred.
-      window.setTimeout(() => speak(`${getLinkGreeting()} I heard your command.`), 140);
+      window.setTimeout(() => speakFallback(`${getLinkGreeting()} I heard your command.`), 140);
     };
 
     recognition.onerror = (event) => {
@@ -175,19 +176,22 @@ export function LinkPresence() {
   }, []);
 
   const activate = async () => {
-    if (state === "speaking") {
-      stopSpeaking();
+    if (speakingRef.current) stopBrowserSpeaking();
+
+    // LiveKit gets first refusal after an explicit gesture. When it connects,
+    // its agent owns STT/LLM/TTS and the browser recognizer stays out of the way.
+    const realtime = await ensureRealtime();
+    if (realtime) {
+      await realtime.setMicrophoneEnabled(true);
+      setState("listening");
       return;
     }
 
-    // LiveKit connection is attempted only after an explicit user gesture, which
-    // keeps microphone/autoplay permissions aligned with browser security rules.
-    await ensureRealtime();
-    startListening();
+    startBrowserFallback();
   };
 
   return (
-    <button className="link-presence" data-state={state} onClick={() => void activate()} aria-label={`LiNK status: ${state}`} title={heard ? `Last heard: ${heard}` : "Say LiNK to wake"}>
+    <button className="link-presence" data-state={state} onClick={() => void activate()} aria-label={`LiNK status: ${state}`} title={heard ? `Last heard: ${heard}` : "Activate LiNK"}>
       <div className="link-image-shell">
         <img src="/brand/link-canon.png" alt="LiNK canonical black and gold emblem" />
         <div className="led-overlay" aria-hidden="true">
@@ -203,7 +207,7 @@ export function LinkPresence() {
           ))}
         </div>
       </div>
-      <span className="link-status">{state === "dormant" ? `LiNK ready · ${realtimeReady ? "realtime" : "fallback"}` : state}</span>
+      <span className="link-status">{state === "dormant" ? `LiNK ready · ${realtimeReady ? "realtime" : "fallback"}` : `${state} · ${realtimeReady ? "realtime" : "fallback"}`}</span>
     </button>
   );
 }
