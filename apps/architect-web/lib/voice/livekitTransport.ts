@@ -30,7 +30,28 @@ async function getConnectionToken(): Promise<TokenResponse> {
 }
 
 function isAllowedArchitectPath(path: string) {
-  return path === "/" || path === "/wargame";
+  return path === "/" || path === "/wargame" || path === "/approvals";
+}
+
+async function requestGovernedAction(payload: string) {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(payload);
+  } catch {
+    throw new Error("Governed action payload was not valid JSON.");
+  }
+
+  const response = await fetch("/api/permissions/request", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(parsed),
+  });
+  const result = await response.json();
+  if (!response.ok && response.status !== 202) {
+    throw new Error(result?.error ?? "Unable to submit governed action request.");
+  }
+
+  return JSON.stringify(result);
 }
 
 export async function connectLinkRealtime(): Promise<LinkRealtimeConnection> {
@@ -46,6 +67,10 @@ export async function connectLinkRealtime(): Promise<LinkRealtimeConnection> {
 
     window.location.assign(path);
     return JSON.stringify({ ok: true, path });
+  });
+
+  room.localParticipant.registerRpcMethod("architect.request_action", async (data) => {
+    return requestGovernedAction(String(data.payload ?? ""));
   });
 
   const handleTrackSubscribed = (track: RemoteTrack) => {
@@ -91,6 +116,7 @@ export async function connectLinkRealtime(): Promise<LinkRealtimeConnection> {
       room.off(RoomEvent.TrackSubscribed, handleTrackSubscribed);
       room.off(RoomEvent.TrackUnsubscribed, handleTrackUnsubscribed);
       room.localParticipant.unregisterRpcMethod("architect.navigate");
+      room.localParticipant.unregisterRpcMethod("architect.request_action");
       await room.localParticipant.setMicrophoneEnabled(false).catch(() => undefined);
       room.disconnect();
       for (const element of attachedAudio) element.remove();
