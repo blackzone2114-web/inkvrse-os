@@ -17,7 +17,7 @@ const previewSnapshot: CommandSnapshot = {
   approvals: [
     {
       id: "preview-approval",
-      title: "Connect Supabase to activate Presence Memory",
+      title: "Connect Supabase to activate governed approvals",
       summary: "The Command screen is running safely in preview mode until environment keys and authentication are connected.",
       severity: "attention",
       occurredAt: new Date().toISOString(),
@@ -34,6 +34,12 @@ const previewSnapshot: CommandSnapshot = {
   ],
   canonCount: 4,
 };
+
+function approvalSeverity(riskLevel: number) {
+  if (riskLevel >= 80) return "critical";
+  if (riskLevel >= 55) return "warning";
+  return "attention";
+}
 
 export async function getCommandSnapshot(): Promise<CommandSnapshot> {
   const supabase = await createClient();
@@ -63,12 +69,11 @@ export async function getCommandSnapshot(): Promise<CommandSnapshot> {
       .order("priority", { ascending: false })
       .limit(6),
     supabase
-      .from("operational_events")
-      .select("id,title,summary,severity,occurred_at")
+      .from("approval_requests")
+      .select("id,tool_name,action,summary,risk_level,created_at")
       .eq("workspace_id", workspace.id)
-      .eq("requires_approval", true)
-      .is("resolved_at", null)
-      .order("occurred_at", { ascending: false })
+      .eq("status", "pending")
+      .order("created_at", { ascending: false })
       .limit(6),
     supabase
       .from("operational_events")
@@ -93,12 +98,12 @@ export async function getCommandSnapshot(): Promise<CommandSnapshot> {
       blockedReason: project.blocked_reason,
       nextAction: project.next_action,
     })),
-    approvals: (approvalsResult.data ?? []).map((event) => ({
-      id: event.id,
-      title: event.title,
-      summary: event.summary,
-      severity: event.severity,
-      occurredAt: event.occurred_at,
+    approvals: (approvalsResult.data ?? []).map((approval) => ({
+      id: approval.id,
+      title: `${approval.tool_name}: ${approval.action}`,
+      summary: approval.summary,
+      severity: approvalSeverity(approval.risk_level),
+      occurredAt: approval.created_at,
     })),
     recentEvents: (eventsResult.data ?? []).map((event) => ({
       id: event.id,
