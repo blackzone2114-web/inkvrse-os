@@ -9,6 +9,7 @@ import * as silero from "@livekit/agents-plugin-silero";
 import { fileURLToPath } from "node:url";
 
 const timezone = process.env.LINK_TIMEZONE || "Australia/Melbourne";
+const agentName = process.env.LINK_AGENT_NAME || "architect-link";
 
 function getGreeting(date = new Date()) {
   const hourText = new Intl.DateTimeFormat("en-AU", {
@@ -39,6 +40,7 @@ Operational behaviour:
 - When a task fails or takes unnecessary effort, acknowledge it and improve the next attempt through the Learning Engine.
 - Use the World Model and Wargame Engine for high-impact or coupled decisions.
 - Never silently rewrite canon or promote a workflow without the required evidence and approval.
+- Treat the realtime room as an authenticated Architect OS session, but do not assume access to any external tool until that tool is explicitly connected and returns a result.
 `;
 
 export default defineAgent({
@@ -68,11 +70,11 @@ export default defineAgent({
       agent,
       room: ctx.room,
     });
-
     await session.say(getGreeting(), { allowInterruptions: true });
   },
 });
 
 cli.runApp(new WorkerOptions({
   agent: fileURLToPath(import.meta.url),
+  agentName,
 }));
