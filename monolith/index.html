@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MONOLITH OS</title>
+  <meta name="description" content="MONOLITH OS second-brain command interface." />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand-block">
+        <div class="sigil">M</div>
+        <div><strong>MONOLITH</strong><span>SECOND BRAIN</span></div>
+      </div>
+
+      <nav class="nav" aria-label="Primary">
+        <button class="nav-item active" data-view="command">Command</button>
+        <button class="nav-item" data-view="capture">Capture</button>
+        <button class="nav-item" data-view="memory">Memory</button>
+        <button class="nav-item" data-view="knowledge">Knowledge</button>
+        <button class="nav-item" data-view="missions">Missions</button>
+        <button class="nav-item" data-view="creation">Creation</button>
+        <button class="nav-item" data-view="automation">Automation</button>
+        <button class="nav-item" data-view="evolution">Evolution</button>
+      </nav>
+
+      <div class="workspace-switcher">
+        <label for="workspace">Workspace</label>
+        <select id="workspace">
+          <option>Personal</option>
+          <option>iNKVRSE</option>
+          <option>Earthfall</option>
+          <option>Business</option>
+        </select>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">SYSTEM ONLINE</p>
+          <h1 id="view-title">Command</h1>
+        </div>
+        <div class="status"><span></span> Local-first mode</div>
+      </header>
+
+      <section class="command-card">
+        <div class="command-copy">
+          <p class="eyebrow">UNIVERSAL CAPTURE</p>
+          <h2>What needs to leave your head?</h2>
+          <p>Capture an idea, create a mission, recall a decision, or route work to an AI department.</p>
+        </div>
+        <form id="capture-form" class="capture-form">
+          <textarea id="capture-input" rows="4" placeholder="Type a thought, instruction, decision, task, or memory..."></textarea>
+          <div class="capture-actions">
+            <button type="button" id="voice-button" class="button secondary">Voice</button>
+            <select id="capture-type" aria-label="Capture type">
+              <option value="auto">Auto-detect</option>
+              <option value="idea">Idea</option>
+              <option value="task">Task</option>
+              <option value="decision">Decision</option>
+              <option value="memory">Memory</option>
+            </select>
+            <button class="button primary" type="submit">Capture</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="grid overview-grid">
+        <article class="panel mission-panel">
+          <div class="panel-head"><span>PRIMARY MISSION</span><button>Open</button></div>
+          <h3>Ship MONOLITH Interface Alpha</h3>
+          <p>Lock the navigation, capture flow, mission view, and second-brain retrieval experience.</p>
+          <div class="progress"><span style="width: 18%"></span></div>
+          <div class="meta"><span>18% complete</span><span>Next: interface states</span></div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head"><span>FOCUS NOW</span><button>Review</button></div>
+          <ul class="task-list">
+            <li><input type="checkbox" /> Define dashboard hierarchy</li>
+            <li><input type="checkbox" /> Build capture interaction</li>
+            <li><input type="checkbox" /> Connect memory schema</li>
+          </ul>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head"><span>SECOND BRAIN</span><button>Search</button></div>
+          <div class="stat-row"><strong>128</strong><span>memories indexed</span></div>
+          <div class="stat-row"><strong>34</strong><span>linked decisions</span></div>
+          <div class="stat-row"><strong>11</strong><span>active knowledge threads</span></div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head"><span>AI DEPARTMENTS</span><button>Manage</button></div>
+          <div class="department-grid">
+            <span>Research</span><span>Creative</span><span>Strategy</span><span>Build</span>
+          </div>
+        </article>
+      </section>
+
+      <section class="grid lower-grid">
+        <article class="panel wide">
+          <div class="panel-head"><span>RECENT MEMORY STREAM</span><button>View all</button></div>
+          <div id="memory-stream" class="memory-stream">
+            <div class="memory-item"><small>DECISION</small><p>Untold OS becomes the engine. Architect becomes the interface philosophy.</p><time>Today</time></div>
+            <div class="memory-item"><small>MISSION</small><p>Build one system, not four competing dashboards.</p><time>Today</time></div>
+            <div class="memory-item"><small>PRINCIPLE</small><p>Every new feature must belong to one of the seven core systems.</p><time>Today</time></div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head"><span>EVOLUTION LOOP</span><button>Inspect</button></div>
+          <p class="muted">The system is tracking repeated friction, abandoned branches, and recurring decisions.</p>
+          <div class="signal"><span></span><span></span><span></span><span></span><span></span></div>
+          <p class="recommendation">Recommendation: freeze architecture until Alpha 1 ships.</p>
+        </article>
+      </section>
+    </main>
+  </div>
+  <script src="./app.js"></script>
+</body>
+</html>
