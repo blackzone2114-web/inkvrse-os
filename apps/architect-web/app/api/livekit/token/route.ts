@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
-import { RoomAgentDispatch, RoomConfiguration } from "@livekit/protocol";
-import { AccessToken } from "livekit-server-sdk";
+import { AccessToken, AgentDispatchClient } from "livekit-server-sdk";
 import { createClient } from "@/lib/supabase/server";
 
 export async function POST() {
@@ -29,9 +28,17 @@ export async function POST() {
   }
 
   const agentName = process.env.LINK_AGENT_NAME || "architect-link";
-  // A unique room per activation guarantees token-based explicit dispatch is applied
-  // at room creation instead of being ignored because an old room already exists.
   const roomName = `architect-${workspace.id}-${randomUUID()}`;
+  const metadata = JSON.stringify({
+    workspaceId: workspace.id,
+    userId: user.id,
+  });
+
+  // Explicit dispatch makes the intended LiNK worker deterministic and avoids
+  // accidentally assigning unrelated agents that may share the LiveKit project.
+  const dispatch = new AgentDispatchClient(url, apiKey, apiSecret);
+  await dispatch.createDispatch(roomName, agentName, { metadata });
+
   const token = new AccessToken(apiKey, apiSecret, {
     identity: user.id,
     name: user.email ?? "Architect OS User",
@@ -44,18 +51,6 @@ export async function POST() {
     canPublish: true,
     canSubscribe: true,
     canPublishData: true,
-  });
-
-  token.roomConfig = new RoomConfiguration({
-    agents: [
-      new RoomAgentDispatch({
-        agentName,
-        metadata: JSON.stringify({
-          workspaceId: workspace.id,
-          userId: user.id,
-        }),
-      }),
-    ],
   });
 
   return NextResponse.json({
