@@ -10,9 +10,12 @@ on:
       - "feature/link-architect-os-foundation"
     paths:
       - "apps/architect-web/**"
+      - ".github/workflows/architect-web-ci.yml"
 
 permissions:
   contents: read
+  issues: write
+  pull-requests: write
 
 jobs:
   verify:
@@ -33,7 +36,33 @@ jobs:
         run: npm install --no-audit --no-fund
 
       - name: Typecheck
-        run: npm run typecheck
+        id: typecheck
+        shell: bash
+        run: |
+          set +e
+          npm run typecheck -- --pretty false 2>&1 | tee /tmp/architect-typecheck.log
+          status=${PIPESTATUS[0]}
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Report TypeScript diagnostics
+        if: steps.typecheck.outputs.status != '0' && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const log = fs.readFileSync('/tmp/architect-typecheck.log', 'utf8');
+            const clipped = log.length > 12000 ? log.slice(-12000) : log;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `## Architect Web CI · TypeScript diagnostics\n\n\`\`\`text\n${clipped}\n\`\`\``
+            });
+
+      - name: Fail on type errors
+        if: steps.typecheck.outputs.status != '0'
+        run: exit 1
 
       - name: Production build
         env:
