@@ -25,16 +25,30 @@ function getGreeting(date = new Date()) {
   return "Good evening, sir.";
 }
 
-async function navigateFrontend(path) {
+function getFrontendParticipant() {
   const room = getJobContext().room;
   const participant = Array.from(room.remoteParticipants.values())[0];
   if (!participant) throw new llm.ToolError("No Architect OS client is connected.");
+  return { room, participant };
+}
 
+async function navigateFrontend(path) {
+  const { room, participant } = getFrontendParticipant();
   return room.localParticipant.performRpc({
     destinationIdentity: participant.identity,
     method: "architect.navigate",
     payload: path,
     responseTimeout: 5000,
+  });
+}
+
+async function requestActionFrontend(action) {
+  const { room, participant } = getFrontendParticipant();
+  return room.localParticipant.performRpc({
+    destinationIdentity: participant.identity,
+    method: "architect.request_action",
+    payload: JSON.stringify(action),
+    responseTimeout: 8000,
   });
 }
 
@@ -48,6 +62,36 @@ const openCommand = llm.tool({
   name: "open_command",
   description: "Return the authenticated Architect OS interface to the main Command workspace when the user explicitly asks to open or return to Command.",
   execute: async () => navigateFrontend("/"),
+});
+
+const openApprovals = llm.tool({
+  name: "open_approvals",
+  description: "Open the Architect OS approvals inbox when the user asks to review approvals or pending actions.",
+  execute: async () => navigateFrontend("/approvals"),
+});
+
+const requestGovernedAction = llm.tool({
+  name: "request_governed_action",
+  description: "Submit a consequential Architect OS action to the permission engine. Use this instead of claiming execution whenever an action could change data, external systems, production state, authentication, privacy, payments, or anything permission-gated. This tool only requests permission; it does not execute the action.",
+  parameters: {
+    type: "object",
+    properties: {
+      toolName: { type: "string", description: "The real tool or subsystem that would perform the action." },
+      action: { type: "string", description: "Short action identifier, such as update_project or deploy_preview." },
+      summary: { type: "string", description: "Plain-language description of exactly what would happen." },
+      permissionLevel: { type: "integer", minimum: 0, maximum: 3, description: "0 read/presentation, 1 low-risk reversible write, 2 consequential write, 3 critical or production-impacting action." },
+      riskLevel: { type: "integer", minimum: 0, maximum: 100 },
+      reversible: { type: "boolean" },
+      affectsAuth: { type: "boolean" },
+      affectsPrivacy: { type: "boolean" },
+      affectsPayments: { type: "boolean" },
+      destructive: { type: "boolean" },
+      productionImpact: { type: "boolean" }
+    },
+    required: ["toolName", "action", "summary", "permissionLevel", "riskLevel", "reversible"],
+    additionalProperties: false
+  },
+  execute: async (action) => requestActionFrontend(action),
 });
 
 const instructions = `
@@ -69,6 +113,8 @@ Operational behaviour:
 - Never silently rewrite canon or promote a workflow without the required evidence and approval.
 - Treat the realtime room as an authenticated Architect OS session, but do not assume access to any external tool until that tool is explicitly connected and returns a result.
 - UI navigation tools are safe presentation actions only. Never describe them as completing the underlying operational task.
+- For any consequential action, call request_governed_action first. If approval is required, tell the user it has been queued for approval and do not claim execution.
+- A permission approval is not proof of execution. Only a later execution receipt can prove that an external action succeeded.
 `;
 
 export default defineAgent({
@@ -79,7 +125,7 @@ export default defineAgent({
   entry: async (ctx) => {
     const agent = new voice.Agent({
       instructions,
-      tools: [openWargame, openCommand],
+      tools: [openWargame, openCommand, openApprovals, requestGovernedAction],
     });
 
     const session = new voice.AgentSession({
