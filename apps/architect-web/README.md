@@ -1,40 +1,55 @@
-# Architect OS — LiNK Foundation
+# Architect OS · LiNK Foundation
 
-Phase-one command interface for Architect OS.
+This isolated Next.js application is the first production scaffold for Architect OS and its persistent coordinating intelligence, LiNK.
 
-## Canon asset
+## Current implementation
 
-Place the approved LiNK source-of-truth PNG at:
+- Canonical persistent LiNK visual component
+- Dormant, listening, processing, speaking and error states
+- Local-time greeting behaviour ending in “sir”
+- Three mirrored centre-out gold LED voice bars
+- Presence Memory schema and authority precedence
+- Workspace membership and row-level security policies
+- Authenticated Supabase server and browser clients
+- Live Command snapshot loader with Safe Preview fallback
+- Email/password sign-in foundation
+- Idempotent first-workspace bootstrap action
+- Tool receipt and operational event tables
+- Isolated GitHub Actions typecheck/build workflow
 
-`public/brand/link-canon.png`
-
-Do not redraw, recolour, crop, regenerate or alter the approved asset. The animation layer is rendered separately over the canonical image.
-
-## Run
+## Local setup
 
 ```bash
-cd apps/architect-web
 npm install
+cp .env.example .env.local
 npm run dev
 ```
 
-Open `http://localhost:3000`.
+The approved canonical asset must be placed unchanged at:
 
-## Implemented
+```text
+public/brand/link-canon.png
+```
 
-- Cinematic black/gold Command shell
-- Persistent LiNK presence component
-- Dormant, listening, processing, speaking and error states
-- Local-time greeting: morning, afternoon or evening
-- Browser speech-recognition activation fallback
-- Three centre-out gold LED bars
-- Fade at the top and bottom LED segments
-- Mobile command layout
+## Database migration order
 
-## Next engineering pass
+1. `supabase/migrations/20260721_presence_memory.sql`
+2. `supabase/migrations/20260721_rls_and_bootstrap.sql`
 
-1. Add the canonical PNG asset.
-2. Replace the phase-one synthetic speaking envelope with analysis of the actual LiveKit/TTS output track.
-3. Add wake-word detection for “LiNK”.
-4. Add Supabase authentication, memory and canon tables.
-5. Add permission-gated GitHub, Gmail and Calendar tools with receipts.
+Do not use a Supabase service-role key in the browser application.
+
+## Safety model
+
+When Supabase is absent or no authenticated session exists, the Command screen remains in clearly labelled Safe Preview mode. Live workspace data is protected by PostgreSQL row-level security. Canon writes require owner or administrator authority.
+
+## Current gate
+
+The branch remains non-production until:
+
+- Repository visibility is verified private
+- Canonical image binary is committed
+- Supabase project values are connected
+- Migrations pass against a clean database
+- Authentication bootstrap is tested
+- CI passes
+- LiveKit output replaces the temporary speaking envelope
