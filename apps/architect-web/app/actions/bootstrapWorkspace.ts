@@ -18,12 +18,13 @@ export async function bootstrapWorkspace() {
   const user = authData.user;
   if (!user) return { ok: false, error: "Authentication required" };
 
-  const { data: existing } = await supabase
+  const { data: existing, error: existingError } = await supabase
     .from("workspaces")
     .select("id")
     .eq("owner_id", user.id)
     .limit(1)
     .maybeSingle();
+  if (existingError) return { ok: false, error: existingError.message };
 
   let workspaceId = existing?.id;
 
@@ -36,16 +37,16 @@ export async function bootstrapWorkspace() {
 
     if (error || !workspace) return { ok: false, error: error?.message ?? "Workspace creation failed" };
     workspaceId = workspace.id;
-
-    await supabase.from("workspace_members").insert({
-      workspace_id: workspaceId,
-      user_id: user.id,
-      role: "owner",
-    });
   }
 
+  const { error: memberError } = await supabase.from("workspace_members").upsert(
+    { workspace_id: workspaceId, user_id: user.id, role: "owner" },
+    { onConflict: "workspace_id,user_id" },
+  );
+  if (memberError) return { ok: false, error: memberError.message };
+
   for (const [subject, predicate, objectText] of canon) {
-    const { data: existingCanon } = await supabase
+    const { data: existingCanon, error: canonLookupError } = await supabase
       .from("memories")
       .select("id")
       .eq("workspace_id", workspaceId)
@@ -55,8 +56,9 @@ export async function bootstrapWorkspace() {
       .eq("status", "active")
       .maybeSingle();
 
+    if (canonLookupError) return { ok: false, error: canonLookupError.message };
     if (!existingCanon) {
-      await supabase.from("memories").insert({
+      const { error: canonInsertError } = await supabase.from("memories").insert({
         workspace_id: workspaceId,
         subject,
         predicate,
@@ -68,28 +70,34 @@ export async function bootstrapWorkspace() {
         source_ref: "PRESENCE-MEMORY-CANON.md",
         created_by: user.id,
       });
+      if (canonInsertError) return { ok: false, error: canonInsertError.message };
     }
   }
 
-  const { data: existingBootstrapEvent } = await supabase
+  const { data: existingBootstrapEvent, error: eventLookupError } = await supabase
     .from("operational_events")
     .select("id")
     .eq("workspace_id", workspaceId)
     .eq("event_type", "system.bootstrap")
     .limit(1)
     .maybeSingle();
+  if (eventLookupError) return { ok: false, error: eventLookupError.message };
 
   if (!existingBootstrapEvent) {
-    await supabase.from("operational_events").insert({
+    const { error: eventError } = await supabase.from("operational_events").insert({
       workspace_id: workspaceId,
       event_type: "system.bootstrap",
       title: "Presence Memory initialised",
       summary: "Architect OS workspace and core LiNK canon are active.",
       severity: "info",
       source_tool: "Architect OS",
+      metadata: { owner_id: user.id, canon_entries: canon.length },
     });
+    if (eventError) return { ok: false, error: eventError.message };
   }
 
   revalidatePath("/");
+  revalidatePath("/approvals");
+  revalidatePath("/wargame");
   return { ok: true, workspaceId };
 }
