@@ -1,0 +1,74 @@
+name: Architect Web CI
+
+on:
+  pull_request:
+    paths:
+      - "apps/architect-web/**"
+      - ".github/workflows/architect-web-ci.yml"
+  push:
+    branches:
+      - "feature/link-architect-os-foundation"
+    paths:
+      - "apps/architect-web/**"
+      - ".github/workflows/architect-web-ci.yml"
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/architect-web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Agent syntax check
+        run: npm run agent:check
+
+      - name: Typecheck
+        id: typecheck
+        shell: bash
+        run: |
+          set +e
+          npm run typecheck -- --pretty false 2>&1 | tee /tmp/architect-typecheck.log
+          status=${PIPESTATUS[0]}
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Report TypeScript diagnostics
+        if: steps.typecheck.outputs.status != '0' && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const log = fs.readFileSync('/tmp/architect-typecheck.log', 'utf8');
+            const clipped = log.length > 12000 ? log.slice(-12000) : log;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `## Architect Web CI · TypeScript diagnostics\n\n\`\`\`text\n${clipped}\n\`\`\``
+            });
+
+      - name: Fail on type errors
+        if: steps.typecheck.outputs.status != '0'
+        run: exit 1
+
+      - name: Production build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: test-anon-key
+        run: npm run build
