@@ -22,6 +22,12 @@ function greeting(date = new Date()) {
   return "Good evening, sir.";
 }
 
+function systemLabel(mode: "live" | "preview", authState: "unconfigured" | "signed_out" | "signed_in") {
+  if (mode === "live" && authState === "signed_in") return "PRESENCE MEMORY LIVE";
+  if (authState === "signed_out") return "AUTHENTICATION REQUIRED";
+  return "SAFE PREVIEW";
+}
+
 export default async function Home() {
   const snapshot = await getCommandSnapshot();
   const topApproval = snapshot.approvals[0];
@@ -45,13 +51,13 @@ export default async function Home() {
             <button className={index === 0 ? "active" : ""} key={module.label}>{module.label}</button>
           ))}
         </nav>
-        <div className="rail-foot">LiNK CORE v0.4</div>
+        <div className="rail-foot">LiNK CORE v0.5</div>
       </aside>
 
       <section className="command-stage">
         <header className="topbar">
           <div><small>{snapshot.workspaceName}</small><strong>COMMAND</strong></div>
-          <div className="system-state"><span /> {snapshot.mode === "live" ? "PRESENCE MEMORY LIVE" : "SAFE PREVIEW"}</div>
+          <div className="system-state"><span /> {systemLabel(snapshot.mode, snapshot.authState)}</div>
         </header>
 
         <div className="hero-zone">
@@ -59,9 +65,16 @@ export default async function Home() {
             <p className="kicker">COORDINATING INTELLIGENCE</p>
             <h1>{greeting()}</h1>
             <p>LiNK is online with persistent project context, canon precedence, operational events and permission-gated tool receipts.</p>
-            {needsBootstrap ? (
-              <form action={initialiseArchitectOS}>
-                <button type="submit">INITIALISE ARCHITECT OS</button>
+
+            {snapshot.authState === "signed_out" ? (
+              <div className="activation-panel">
+                <p>Supabase is connected. Authenticate to unlock live workspace memory, approvals and governed operations.</p>
+                <Link href="/sign-in" className="primary-action">SIGN IN TO ARCHITECT OS</Link>
+              </div>
+            ) : needsBootstrap ? (
+              <form action={initialiseArchitectOS} className="activation-panel">
+                <p>Your authenticated account is ready. Initialise the first Architect OS workspace and canonical LiNK memory.</p>
+                <button type="submit" className="primary-action">INITIALISE ARCHITECT OS</button>
               </form>
             ) : (
               <div className="command-input"><span>ASK LiNK</span><input aria-label="Ask LiNK" placeholder="What requires my attention?" /><button>TRANSMIT</button></div>
