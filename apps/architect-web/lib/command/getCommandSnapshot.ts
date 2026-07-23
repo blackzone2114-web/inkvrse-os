@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export interface CommandSnapshot {
   mode: "live" | "preview";
+  authState: "unconfigured" | "signed_out" | "signed_in";
   workspaceName: string;
   userEmail?: string;
   blockedProjects: Array<{ id: string; name: string; blockedReason: string | null; nextAction: string | null }>;
@@ -12,6 +13,7 @@ export interface CommandSnapshot {
 
 const previewSnapshot: CommandSnapshot = {
   mode: "preview",
+  authState: "unconfigured",
   workspaceName: "Architect OS",
   blockedProjects: [],
   approvals: [
@@ -47,7 +49,21 @@ export async function getCommandSnapshot(): Promise<CommandSnapshot> {
 
   const { data: authData } = await supabase.auth.getUser();
   const user = authData.user;
-  if (!user) return previewSnapshot;
+  if (!user) {
+    return {
+      ...previewSnapshot,
+      authState: "signed_out",
+      approvals: [
+        {
+          id: "preview-sign-in",
+          title: "Sign in to activate Architect OS",
+          summary: "Supabase is configured. Authentication is the remaining gate before workspace memory, approvals and live project state can load.",
+          severity: "attention",
+          occurredAt: new Date().toISOString(),
+        },
+      ],
+    };
+  }
 
   const { data: workspaces } = await supabase
     .from("workspaces")
@@ -57,7 +73,16 @@ export async function getCommandSnapshot(): Promise<CommandSnapshot> {
 
   const workspace = workspaces?.[0];
   if (!workspace) {
-    return { ...previewSnapshot, mode: "live", userEmail: user.email, workspaceName: "No workspace yet" };
+    return {
+      ...previewSnapshot,
+      mode: "live",
+      authState: "signed_in",
+      userEmail: user.email,
+      workspaceName: "No workspace yet",
+      approvals: [],
+      recentEvents: [],
+      canonCount: 0,
+    };
   }
 
   const [projectsResult, approvalsResult, eventsResult, canonResult] = await Promise.all([
@@ -90,6 +115,7 @@ export async function getCommandSnapshot(): Promise<CommandSnapshot> {
 
   return {
     mode: "live",
+    authState: "signed_in",
     workspaceName: workspace.name,
     userEmail: user.email,
     blockedProjects: (projectsResult.data ?? []).map((project) => ({
